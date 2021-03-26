@@ -27,7 +27,9 @@ jobs:
           key: v1-dependencies-{{ checksum "project.clj" }}
 
       # dogfood!
+      - run: git clean -fdx # prevent any form of caching
       - run: EVAL_IN_LEININGEN=1 lein eastwood
 
       # run tests!
+      - run: git clean -fdx # prevent any form of caching
       - run: lein test-all
