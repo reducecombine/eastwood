@@ -38,7 +38,7 @@
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
-             :1.10 {:dependencies [[org.clojure/clojure "1.10.0-master-SNAPSHOT"]]}}
+             :1.10 {:dependencies [[org.clojure/clojure "1.10.2"]]}}
   :aliases {"test-all" ["with-profile"
                         "dev,test,1.6:dev,test,1.7:dev,test,1.8:dev,test,1.9"
                         "test"]}
