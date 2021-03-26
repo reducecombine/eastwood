@@ -1,14 +1,21 @@
+(def eval-in-leiningen?
+  (#{"1" "true"} (System/getenv "EVAL_IN_LEININGEN")))
+
+(def plugin-source-path "lein-eastwood")
+
 (defproject jonase/eastwood "0.3.14"
   :description "A Clojure lint tool"
   :url "https://github.com/jonase/eastwood"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :source-paths ["src" "copied-deps"]
+  :source-paths ~(cond-> ["src" "copied-deps"]
+                   eval-in-leiningen? (conj plugin-source-path))
   :dependencies [[org.clojure/clojure "1.10.2" :scope "provided"]
                  [org.clojars.brenton/google-diff-match-patch "0.1"]
                  [org.ow2.asm/asm-all "5.2"]]
   :profiles {:dev {:dependencies [[org.clojure/tools.macro "0.1.5"]
                                   [jafingerhut/dolly "0.1.0"]]}
+             :eastwood-plugin {:source-paths [~plugin-source-path]}
              :warn-on-reflection {:global-vars {*warn-on-reflection* true}}
              :test {:dependencies [[commons-io "2.4" #_"Needed for issue-173-test"]]
                     :resource-paths ["test-resources"
@@ -34,6 +41,6 @@
   ;; close to the earliest version that it was most tested with.
   :min-lein-version "2.3.0"
   :resource-paths ["resource" "resources"]
-  :eval-in ~(case (System/getenv "EVAL_IN_LEININGEN")
-              ("1" "true") :leiningen
+  :eval-in ~(if eval-in-leiningen?
+              :leiningen
               :subprocess))

@@ -28,7 +28,7 @@ jobs:
 
       # dogfood!
       - run: git clean -fdx # prevent any form of caching
-      - run: EVAL_IN_LEININGEN=1 lein eastwood
+      - run: EVAL_IN_LEININGEN=1 lein with-profile +eastwood-plugin eastwood
 
       # run tests!
       - run: git clean -fdx # prevent any form of caching
