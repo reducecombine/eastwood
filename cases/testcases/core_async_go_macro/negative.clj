@@ -24,9 +24,23 @@
             :baz :quux
             (prn "FASF")))))))
 
+;; The original https://github.com/jonase/eastwood/issues/330 report
 (defrecord Old-OM [om-config client-id access]
   Lifecycle
   (start [component]
     (async/go
       (prn "FASF")))
   (stop [component]))
+
+(defprotocol P
+  (x [p]))
+
+;; An example of something that would make Eastwood choke. Found on core.async's test suite
+(defrecord R [z]
+  P
+  (x [this]
+    (go
+      (loop []
+        (if (zero? (rand-int 3))
+          [z (.z this)]
+          (recur))))))
