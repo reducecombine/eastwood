@@ -17,7 +17,9 @@
                                   [jafingerhut/dolly "0.1.0"]]}
              :eastwood-plugin {:source-paths [~plugin-source-path]}
              :warn-on-reflection {:global-vars {*warn-on-reflection* true}}
-             :test {:dependencies [[commons-io "2.4" #_"Needed for issue-173-test"]]
+             :test {:dependencies [[commons-io "2.4" #_"Needed for issue-173-test"]
+                                   [org.clojure/core.async "1.3.610" #_"For exercising the `go` macro"]
+                                   [com.stuartsierra/component "1.0.0" #_"For exercising the `go` macro"]]
                     :resource-paths ["test-resources"
                                      ;; if wanting the `cases` to be available during development / the default profile,
                                      ;; please simply add `with-profile +test` to your CLI invocation.

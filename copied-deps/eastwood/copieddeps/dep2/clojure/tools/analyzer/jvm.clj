@@ -172,11 +172,45 @@
            :else form)))
       form)))
 
+;; -----------  begin patch from eastwood side --------------
+(defn unresolvable-sym? [x]
+  (and (symbol? x)
+       (not (try
+              (resolve x)
+              ;; `resolve` can throw exception in Clojure < 1.10:
+              (catch Exception _
+                false)))))
+
+;; -----------  end patch from eastwood side   --------------
+
 (defn macroexpand-1
   "If form represents a macro form or an inlineable function,returns its expansion,
    else returns form."
   ([form] (macroexpand-1 form (empty-env)))
   ([form env]
+   ;; -----------  begin patch from eastwood side --------------
+   (let [unresolvable-sym? (memoize unresolvable-sym?) ;; memoize transiently for some perf gain, while not risking incorrect results
+         env (update env :locals (fn [m]
+                                   ;; remove tags, because of the following scenario:
+                                   ;; * eastwood.copieddeps.dep2.clojure.tools.analyzer analyzes core.async code
+                                   ;; * the form is type-annotated by eastwood.copieddeps.dep2.clojure.tools.analyzer
+                                   ;; * the form, when macroexpanded, calls clojure.tools.analyzer (NOT prefixed with eastwood.copieddeps)
+                                   ;;   * (it's a core.async impl detail)
+                                   ;; * clojure.tools.analyzer find these tags that were unexpected to it, and try to resolve them.
+                                   ;; * because a given tag may not be resolvable until it's fully evaluated (and not just macroexpanded),
+                                   ;;   then these tags can trigger an exception as clojure.tools.analyzer tries to resolve them (see: git.io/JYn9O)
+                                   (into {}
+                                         (map (fn [[k {:keys [tag o-tag]
+                                                      :as v}]]
+                                               [k
+                                                (cond-> v
+                                                  (unresolvable-sym? tag)
+                                                  (dissoc :tag)
+                                                  
+                                                  (unresolvable-sym? o-tag)
+                                                  (dissoc :o-tag))]))
+                                         m)))]
+     ;; -----------  end patch from eastwood side --------------
      (env/ensure (global-env)
        (cond
 
@@ -220,7 +254,7 @@
         (desugar-symbol form env)
 
         :else
-        form))))
+        form)))))
 
 (defn qualify-arglists [arglists]
   (vary-meta arglists merge

@@ -1,13 +1,13 @@
 (ns eastwood.lint-test
   (:use [clojure.test ])
-  (:require [eastwood.lint :refer :all]
+  (:require [clojure.string :as string]
+            [eastwood.lint :refer :all]
             [eastwood.copieddeps.dep11.clojure.java.classpath :as classpath]
             [eastwood.util :as util]
             [eastwood.copieddeps.dep9.clojure.tools.namespace.dir :as dir]
             [eastwood.copieddeps.dep9.clojure.tools.namespace.track :as track]
             [eastwood.reporting-callbacks :as reporting])
   (:import java.io.File))
-
 
 (deftest expand-ns-keywords-test
   (testing ""
@@ -99,3 +99,15 @@
   (testing "A large defprotocol doesn't cause a 'Method code too large' exception"
     (is (= {:some-warnings false}
            (eastwood.lint/eastwood (assoc eastwood.lint/default-opts :namespaces #{'testcases.large-defprotocol}))))))
+
+(deftest core-async-integration-test
+  (are [input expected] (= expected
+                           (-> (with-out-str
+                                  (eastwood.lint/eastwood (assoc eastwood.lint/default-opts :namespaces #{input})))
+                                (string/split #"\n")
+                                last))
+    'testcases.core-async-go-macro.negative
+    "== Warnings: 0 (not including reflection warnings)  Exceptions thrown: 0"
+    
+    'testcases.core-async-go-macro.positive
+    "== Warnings: 3 (not including reflection warnings)  Exceptions thrown: 0"))
