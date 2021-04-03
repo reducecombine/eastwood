@@ -14,7 +14,7 @@
 
 (defmacro timeit
   "Evaluates expr and returns a vector containing the expression's
-return value followed by the time it took to evaluate in millisec."
+  return value followed by the time it took to evaluate in millisec."
   {:style/indent 0}
   [expr]
   `(let [start# (. System (nanoTime))
@@ -65,7 +65,7 @@ return value followed by the time it took to evaluate in millisec."
                      nil))
       nil)))
 
- ; first char is upper-case
+                                        ; first char is upper-case
 
 (defn ^java.net.URI to-uri [x]
   (cond (instance? java.net.URI x) x
@@ -671,7 +671,7 @@ pprint-meta instead."
                                  (fn [stmts]
                                    (mapv #(assoc % :eastwood/unused-ret-val-expr-in-try-body true)
                                          stmts))))
-                  ;; Mark the return expression
+                ;; Mark the return expression
                 ast (if-not (some #{:ret} (:children body))
                       (do
                         (println (format "Found :try node with :body child that is :do, but do has no :ret in children (only %s)"
@@ -931,15 +931,53 @@ StringWriter."
                :matching-macro (:macro m)}))
           enclosing-macros)))
 
-(defn allow-warning-based-on-enclosing-macros [w linter suppress-desc
-                                               suppress-conditions opt]
-  (let [ast (-> w linter :ast)
-        ;; Don't bother calculating enclosing-macros if there are
-        ;; no suppress-conditions to check, to save time.
-        encl-macros (when (seq suppress-conditions)
+(defn omit-unrelated-warning?
+  "Should a given warning (coming from a macroexpansion) be omitted
+  because the macroexpansions come from macros defined outside of the user's project?"
+  [lint-foreign-macroexpansions?
+   project-sources-set?
+   project-namespace-strings
+   enclosing-macros]
+  (cond
+    lint-foreign-macroexpansions?
+    false
+
+    (not project-sources-set?)
+    false
+
+    :else
+    (boolean (and (seq enclosing-macros)
+                  (seq project-namespace-strings)
+                  (->> enclosing-macros
+                       (map :macro)
+                       (map namespace)
+                       ;; if none of the enclosing macros was related to the user's project,
+                       ;; then it should be ignored because it's not an issue under the control of the user:
+                       (not-any? project-namespace-strings))))))
+
+(defn allow-warning-based-on-enclosing-macros [w
+                                               linter
+                                               suppress-desc
+                                               suppress-conditions
+                                               {:keys [lint-foreign-macroexpansions?]
+                                                :as opt}]
+  (let [project-namespaces (:eastwood.internal/project-namespaces opt)
+        project-namespace-strings (->> project-namespaces
+                                       (map str)
+                                       (set))
+        ast (-> w linter :ast)
+        project-sources-set? (seq project-namespace-strings) ;; This means: did the user set :source-paths/:tests-paths ?
+        ;; Only calculate the enclosing macros when necessary - for performance:
+        encl-macros (when (or (seq suppress-conditions)
+                              project-sources-set?)
                       (enclosing-macros ast))
         match (some #(meets-suppress-condition ast encl-macros %)
-                    suppress-conditions)]
+                    suppress-conditions)
+        omit? (omit-unrelated-warning? lint-foreign-macroexpansions?
+                                       project-sources-set?
+                                       project-namespace-strings
+                                       encl-macros)
+        ignore? (or match omit?)]
     (when (and match (:debug-suppression opt))
       ((make-msg-cb :debug opt)
        (with-out-str
@@ -956,11 +994,11 @@ StringWriter."
                            (if depth
                              (take depth encl-macros)
                              encl-macros)))
-;;           (println "Debug AST contents:")
-;;           (pprint-ast-node ast)
+           ;;           (println "Debug AST contents:")
+           ;;           (pprint-ast-node ast)
            ))))
-    ;; allow the warning if there was no match
-    (not match)))
+    ;; allow the warning if there was no match:
+    (not ignore?)))
 
 (defn allow-warning [w opt]
   (let [linter (:linter w)]
@@ -1080,12 +1118,12 @@ StringWriter."
 
 (comment
 
-;; This version tends to be much slower due to the size of the :env
-;; data, and converting it all to strings.
+  ;; This version tends to be much slower due to the size of the :env
+  ;; data, and converting it all to strings.
   (def a2 (update-in a [:analyze-results :asts] (fn [ast] (mapv #(util/clean-ast % :with-env) ast))))
 
-;; Older versions that may not be so useful any more, but kept here in
-;; case there remains something useful.
+  ;; Older versions that may not be so useful any more, but kept here in
+  ;; case there remains something useful.
 
   (def fn1 (:init (nth a 1)))
   (def locs1 (->> fn1 util/ast-nodes (filter (util/op= :local))))
@@ -1109,14 +1147,14 @@ StringWriter."
   (def ret-expr-args (-> meth1 :body :ret :body :ret :args))
 
   (map :name (:params meth1))
-;;=> (x__#0 y__#0 z__#0)
+  ;;=> (x__#0 y__#0 z__#0)
   (map :name ret-expr-args)
-;;=> (x__#0 y__#-1)
+  ;;=> (x__#0 y__#-1)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Some code useful for copying and pasting into a REPL for debugging
-;; AST contents with clojure.inspector.
+  ;; Some code useful for copying and pasting into a REPL for debugging
+  ;; AST contents with clojure.inspector.
 
   (require '[clojure.inspector :as insp])
   (require '[eastwood.analyze-ns :as ana] :reload)

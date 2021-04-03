@@ -65,7 +65,7 @@
     (testing "basic functionality"
       (is (= {:dirs (set (map util/canonical-filename dirs))
               :namespaces eastwood-src-namespaces}
-             (select-keys (nss-in-dirs dirs 0) [:dirs :namespaces]))))))
+             (select-keys (nss-in-dirs dirs 0 true) [:dirs :namespaces]))))))
 
 (deftest effective-namespaces-test
   (let [source-paths #{"src"}
@@ -163,3 +163,17 @@ The ignored-faults must match ns (exactly) and file/column (exactly, but only if
   (testing "Processing a namespace where `^:const` is used results in no exceptions being thrown"
     (is (= {:some-warnings false}
            (eastwood.lint/eastwood (assoc eastwood.lint/default-opts :namespaces #{'testcases.const}))))))
+
+(deftest per-project-macroexpansion-omission
+  (testing "Linter faults can be omitted if the macroexpansion was detected as coming from outside the :source-paths"
+    (are [lint-foreign-macroexpansions? source-paths expected]
+        (= expected
+           (eastwood.lint/eastwood (assoc eastwood.lint/default-opts
+                                          :namespaces #{'testcases.faulty-defmacro-consumer}
+                                          :lint-foreign-macroexpansions? lint-foreign-macroexpansions?
+                                          :source-paths source-paths)))
+      #_lint-foreign-macroexpansions? #_source-paths           #_expected
+      false                           #{"cases-extra"}         {:some-warnings false}
+      false                           #{"cases-extra" "cases"} {:some-warnings true}
+      true                            #{"cases-extra"}         {:some-warnings true}
+      true                            #{"cases-extra" "cases"} {:some-warnings true})))

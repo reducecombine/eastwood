@@ -237,10 +237,11 @@
                :recommended-fnames desired-fname-set,
                :recommended-namespace desired-ns}]))))
 
-(defn nss-in-dirs [dir-name-strs modified-since]
+(defn nss-in-dirs [dir-name-strs modified-since check-mismatches?]
   (let [dir-name-strs (set (map util/canonical-filename dir-name-strs))
         mismatches (filename-namespace-mismatches dir-name-strs)]
-    (when (seq mismatches)
+    (when (and check-mismatches?
+               (seq mismatches))
       (throw (ex-info "namespace-file-name-mismatch"
                       {:err :namespace-filename-mismatch
                        :err-data {:mismatches mismatches}})))
@@ -303,10 +304,12 @@
   ;; once for each of :source-paths and :test-paths, and only if
   ;; needed.
   (let [all-ns (concat namespaces exclude-namespaces)
+        ssp (nss-in-dirs source-paths modified-since false)
         sp (when (some #{:source-paths} all-ns)
-             (nss-in-dirs source-paths modified-since))
+             (nss-in-dirs source-paths modified-since true))
+        ttp (nss-in-dirs test-paths modified-since false)
         tp (when (some #{:test-paths} all-ns)
-             (nss-in-dirs test-paths modified-since))
+             (nss-in-dirs test-paths modified-since true))
         expanded-namespaces {:source-paths (:namespaces sp)
                              :test-paths (:namespaces tp)}
         excluded-namespaces (set (expand-ns-keywords expanded-namespaces
@@ -315,6 +318,10 @@
                       (expand-ns-keywords expanded-namespaces)
                       distinct
                       (remove excluded-namespaces))
+     ;; Store the sets of project namespaces (in source and test paths) even if they won't necessarily be linted.
+     ;; This facilitates some linter logic:
+     :eastwood.internal/project-namespaces (into (:namespaces ssp)
+                                                 (:namespaces ttp))
      :test-deps (:deps tp)
      :src-deps (:deps sp)
      :dirs (concat (:dirs sp) (:dirs tp))
@@ -473,7 +480,8 @@ Return value:
                    :config-files #{}
                    :builtin-config-files default-builtin-config-files
                    :rethrow-exceptions? false
-                   :ignored-faults {}})
+                   :ignored-faults {}
+                   :lint-foreign-macroexpansions? false})
 
 (defn last-options-map-adjustments [opts reporter]
   (let [{:keys [namespaces] :as opts} (merge default-opts opts)
@@ -539,7 +547,10 @@ Return value:
                    modified-since
                    cwd] :as opts} (last-options-map-adjustments opts reporter)
            namespaces-info (effective-namespaces exclude-namespaces namespaces
-                                                 (setup-lint-paths source-paths test-paths) modified-since)
+                                                       (setup-lint-paths source-paths test-paths) modified-since)
+           opts (assoc opts
+                       :eastwood.internal/project-namespaces
+                       (:eastwood.internal/project-namespaces namespaces-info))
            linter-info (select-keys opts [:linters :exclude-linters :add-linters :disable-linter-name-checks])]
        (reporting/debug reporter :var-info (with-out-str
                                              (util/print-var-info-summary @typos/var-info-map-delayed opts)))

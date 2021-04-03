@@ -1,5 +1,13 @@
 # Change log for Eastwood
 
+## Changes from 0.4.0 to
+
+#### New
+
+* Linter faults that are detected as coming from a macroexpansion not originated from your `:source-paths`/`:test-paths` are now **omitted by default**.
+  * This way Eastwood essentially defaults to linting your code - not third-party code!
+  * You can revert back to the old behavior by setting the `:lint-foreign-macroexpansions? true` configuration option.
+
 ## Changes from 0.3.14 to 0.4.0 
 
 #### New

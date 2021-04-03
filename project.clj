@@ -21,7 +21,9 @@
                     :resource-paths ["test-resources"
                                      ;; if wanting the `cases` to be available during development / the default profile,
                                      ;; please simply add `with-profile +test` to your CLI invocation.
-                                     "cases"]}
+                                     "cases"
+                                     ;; the intent of the `cases` vs. `cases-extra` distinction is exercising logic related to source paths.
+                                     "cases-extra"]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
