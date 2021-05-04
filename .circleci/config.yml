@@ -52,6 +52,10 @@ jobs:
           command: git clean -fdx
 
       - run:
+          name: Foo
+          command: env
+
+      - run:
           name: Run Eastwood against itself
           command: EVAL_IN_LEININGEN=1 lein with-profile +eastwood-plugin eastwood
 
