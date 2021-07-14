@@ -549,7 +549,7 @@
     :as effective-namespaces}
    linters]
   (dirs-scanned reporter cwd dirs)
-  (let [no-ns-forms (misc/no-ns-form-found-files dirs files file-map linters cwd)
+  (let [no-ns-forms (misc/no-ns-form-found-files dirs files file-map linters cwd opts)
         non-clojure-files (misc/non-clojure-files non-clojure-files linters cwd)]
 
     (assert (seq linters) "No :linters configured")
@@ -611,7 +611,8 @@
                  (update :exclude-namespaces set))
         ;; Changes below override anything in the caller-provided
         ;; options map.
-        opts (assoc opts :warning-enable-config
+        opts (assoc opts
+                    :warning-enable-config
                     (util/init-warning-enable-config
                      (:builtin-config-files opts)
                      (:config-files opts) opts))]
